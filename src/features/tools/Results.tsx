@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Info, ChevronDown, ChevronUp, Lock, Star, CheckCircle, Building, Calculator, Copy, Check } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, Info, ChevronDown, ChevronUp, Lock, Star, CheckCircle, Building, Calculator, Copy, Check, Workflow, FileText, MessageSquare, GripVertical, ArrowDown, X } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -1357,20 +1357,103 @@ const ContractueleUitvoeringsvoorwaardenTable: React.FC = () => {
 };
 
 const Results: React.FC = () => {
-  const { code } = useParams<{ code: string }>();
-  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { isStealthMode } = useStealthMode();
 
   const [cpvName, setCpvName] = useState('Laden...');
   const [openAccordions, setOpenAccordions] = useState<string[]>([]);
 
-  // Extract URL parameters
-  const organizationType = searchParams.get('org') || '';
-  const estimationAnswer = searchParams.get('estimation') || '';
+  // Hardcoded parameters for the specific result page
+  const code = '39130000-2';
+  const organizationType = 'rijksoverheid';
+  const estimationAnswer = 'yes';
+
+  // Calculate current week number
+  const getCurrentWeek = () => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), 0, 1);
+    const diff = now.getTime() - start.getTime();
+    const oneWeek = 1000 * 60 * 60 * 24 * 7;
+    return Math.ceil(diff / oneWeek);
+  };
+
+  const currentWeek = getCurrentWeek();
 
   // Mock data - replace with real data from your Google Sheet
   const criteriaCount = 48;
+
+  // Startup cards state
+  const [startupCards, setStartupCards] = useState([
+    {
+      id: 1,
+      title: "CO2 Zero",
+      description: "CO2Zero builds the world's most advanced machines for removing CO2 from the air while transforming deserts into thriving, water-positive ecosystems. Our modular, electrified DAC systems outperform single-tech solutions and are designed to scale profitably from day one.",
+      category: "GreenTech",
+      caseManager: "Wadim",
+      status: "unassigned" // unassigned, qualify, no-match
+    },
+    {
+      id: 2,
+      title: "FinFlow Analytics",
+      description: "AI-powered financial analytics platform that helps SMEs optimize cash flow and predict market trends with 95% accuracy using machine learning algorithms.",
+      category: "FinTech",
+      caseManager: "Jeroen",
+      status: "unassigned"
+    },
+    {
+      id: 3,
+      title: "MedTech Solutions",
+      description: "Revolutionary medical device for early cancer detection using non-invasive biomarker analysis, reducing diagnosis time by 80%.",
+      category: "MedTech", 
+      caseManager: "Sam",
+      status: "unassigned"
+    }
+  ]);
+
+  const [draggedCard, setDraggedCard] = useState<number | null>(null);
+
+  const categories = ["FinTech", "AI Adoption", "AI/FinTech", "MedTech", "GreenTech", "Smart Fridges", "HR Tech", "WealthTech", "Other"];
+  const caseManagers = ["Wadim", "Jeroen", "Sam", "Aart", "Daan", "Ivo", "Daniel", "Maurits", "Other"];
+
+  const handleDragStart = (e: React.DragEvent, cardId: number) => {
+    setDraggedCard(cardId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragEnd = () => {
+    setDraggedCard(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, status: 'qualify' | 'no-match') => {
+    e.preventDefault();
+    if (draggedCard) {
+      setStartupCards(prev => prev.map(card => 
+        card.id === draggedCard ? { ...card, status } : card
+      ));
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const updateCardCategory = (cardId: number, category: string) => {
+    setStartupCards(prev => prev.map(card => 
+      card.id === cardId ? { ...card, category } : card
+    ));
+  };
+
+    const updateCardCaseManager = (cardId: number, caseManager: string) => {
+    setStartupCards(prev => prev.map(card =>
+      card.id === cardId ? { ...card, caseManager } : card
+    ));
+  };
+
+  const moveCardBackToStack = (cardId: number) => {
+    setStartupCards(prev => prev.map(card =>
+      card.id === cardId ? { ...card, status: 'unassigned' } : card
+    ));
+  };
 
   // Add fade-in animation styles
   useEffect(() => {
@@ -1401,15 +1484,7 @@ const Results: React.FC = () => {
     };
   }, []);
 
-  // Auto-open first tab after animations complete
-  useEffect(() => {
-    // Wait for all animations to complete (700ms + 1200ms + 500ms buffer)
-    const timer = setTimeout(() => {
-      setOpenAccordions(['technische-specificaties']);
-    }, 2400);
-    
-    return () => clearTimeout(timer);
-  }, []);
+
 
   // Store current path in sessionStorage before navigating to results
   useEffect(() => {
@@ -1622,18 +1697,9 @@ const Results: React.FC = () => {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-      <div className="container mx-auto px-6 lg:px-8 pt-24 pb-8">
+    <div className="min-h-screen bg-gradient-to-br from-gradient-start via-gradient-middle to-gradient-end">
+      <div className="container mx-auto px-6 lg:px-8 pt-24 pb-24">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8 animate-fade-in" style={{ animationDelay: '0ms', animationDuration: '700ms' }}>
-          <button
-            onClick={handleBackNavigation}
-            className="flex items-center gap-2 text-blue-600 hover:text-blue-800 transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5" />
-            Vorige stap
-          </button>
-        </div>
 
         {/* Results Header */}
         <div className="bg-white rounded-xl shadow-sm border p-6 mb-6 animate-fade-in" style={{ animationDelay: '200ms', animationDuration: '1000ms' }}>
@@ -1643,10 +1709,10 @@ const Results: React.FC = () => {
                 {estimationAnswer === 'no' ? (
                   'Geen EED verplichtingen'
                 ) : (
-                  <>
-                    <span className="w-4 h-4 rounded-full bg-red-500"></span>
-                    Let op: EED verplichtingen
-                  </>
+                  <div className="flex items-center gap-3">
+                    <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse flex-shrink-0 mt-0.5"></div>
+                    Week {currentWeek}: 5 new startups imported
+                  </div>
                 )}
               </h1>
             </div>
@@ -1656,179 +1722,251 @@ const Results: React.FC = () => {
           {/* User Input Summary - integrated */}
           {(organizationType || estimationAnswer) && (
             <div className="mt-6 pt-6 border-t border-gray-100">
-              <h2 className="text-lg font-semibold text-blue-900 mb-4 flex items-center gap-2">
-                <CheckCircle className="h-5 w-5" />
-                Jouw selecties
+              <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                <Workflow className="h-5 w-5" style={{ color: '#4C818C' }} />
+                Dealflow sources
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* CPV Selection */}
-                <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                {/* Operator Exchange */}
+                <div className="bg-card-bg rounded-lg p-4 border border-gradient-start/30">
                   <div className="flex items-center gap-2 mb-2">
-                    <Star className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-900">Aanbesteding</span>
+                    <Star className="h-4 w-4 text-gradient-start" style={{ color: '#4C818C' }} />
+                    <span className="text-sm font-medium text-gray-800">Operator Exchange</span>
                   </div>
-                  <p className="text-sm text-gray-700 font-medium">{code}</p>
-                  <p className="text-xs text-gray-600">{cpvName}</p>
+                  <p className="text-sm text-gray-700 font-medium">2 Startups</p>
+                  <p className="text-xs text-gray-600">€300.000 worth of dealflow</p>
                 </div>
 
-                {/* Organization Type */}
-                {organizationType && (
-                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Building className="h-4 w-4 text-blue-600" />
-                      <span className="text-sm font-medium text-blue-900">Organisatie</span>
-                    </div>
-                    <p className="text-sm text-gray-700 font-medium">{getOrganizationName(organizationType)}</p>
-                    <p className="text-xs text-gray-600">Type aanbestedende dienst</p>
+                {/* Email form */}
+                <div className="bg-card-bg rounded-lg p-4 border border-gradient-start/30">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Building className="h-4 w-4" style={{ color: '#4C818C' }} />
+                    <span className="text-sm font-medium text-gray-800">Email form</span>
                   </div>
-                )}
+                  <p className="text-sm text-gray-700 font-medium">1 Startup</p>
+                  <p className="text-xs text-gray-600">€200.000 worth of dealflow</p>
+                </div>
 
-                {/* Estimation Answer */}
-                {estimationAnswer && (
-                  <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Calculator className="h-4 w-4 text-blue-600" />
-                      <span className="text-sm font-medium text-blue-900">Drempelwaarde</span>
-                    </div>
-                    <p className="text-sm text-gray-700 font-medium">{getEstimationText(estimationAnswer)}</p>
-                    {organizationType && estimationAnswer !== 'help' && (
-                      <p className="text-xs text-gray-600">Drempel: {getThresholdAmount(organizationType, 'Diensten')}</p>
-                    )}
+                {/* Refered */}
+                <div className="bg-card-bg rounded-lg p-4 border border-gradient-start/30">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Calculator className="h-4 w-4" style={{ color: '#4C818C' }} />
+                    <span className="text-sm font-medium text-gray-800">Refered</span>
                   </div>
-                )}
+                  <p className="text-sm text-gray-700 font-medium">0 Startups</p>
+                  <p className="text-xs text-gray-600">€0 worth of dealflow</p>
+                </div>
               </div>
             </div>
           )}
         </div>
 
-        {/* Below threshold explanation */}
-        {estimationAnswer === 'no' && (
-          <div className="bg-green-50 border border-green-200 rounded-xl p-6 mb-6 animate-fade-in" style={{ animationDelay: '500ms', animationDuration: '1000ms' }}>
-            <div className="flex items-start space-x-4">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <CheckCircle className="w-6 h-6 text-green-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-green-900">Goed nieuws!</h3>
-                <p className="text-green-700 mt-2">
-                  Je raming blijft onder de drempelwaarde van {organizationType && getThresholdAmount(organizationType, 'Diensten')}. 
-                  Dit betekent dat er geen specifieke sectorale verplichtingen van toepassing zijn op je aanbesteding.
-                </p>
-                <p className="text-green-600 text-sm mt-3">
-                  Je kunt aanbesteden volgens de nationale aanbestedingsregels zonder aanvullende sectorale wetgeving.
-                </p>
-              </div>
-            </div>
-            <Confetti />
-          </div>
-        )}
+                        {/* Startup Deal Flow Section */}
+                <div className="mt-8 animate-fade-in" style={{ animationDelay: '400ms', animationDuration: '1000ms' }}>
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-        {/* EED Section - only show if above threshold */}
-        {estimationAnswer !== 'no' && (
-          <div className="mb-6 animate-fade-in" style={{ animationDelay: '600ms', animationDuration: '1000ms' }}>
-            <h2 className="text-2xl font-bold text-gray-900 mb-3">Overzicht EED verplichtingen</h2>
-            <p className="text-gray-700 mb-6">
-              Voor deze aanbesteding is de Europese Energie-Efficiëntierichtlijn (EED) van toepassing. Je bent daarom <strong><u>verplicht</u></strong> om bepaalde technische specificaties uit de <a href="https://green-forum.ec.europa.eu/green-business/green-public-procurement/gpp-criteria-and-requirements_en" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">EU Green Public Procurement (GPP)-criteria</a> op te nemen in je aanbestedingsdocumenten. De EU GPP-criteria geven ook (niet verplichte) aanbevelingen voor de bepaling scope opdracht, de gunningscriteria en de contractuele uitvoeringsvoorwaarden, omdat deze onderdelen samen helpen om duurzaamheidsdoelen te realiseren.
-            </p>
-          </div>
-        )}
+                    {/* NO MATCH Drop Zone - Left */}
+                    <div className="order-2 lg:order-1">
+                      <div className="h-14 mb-6"></div>
+                      <div
+                        onDrop={(e) => handleDrop(e, 'no-match')}
+                        onDragOver={handleDragOver}
+                        className={`border-4 border-dashed rounded-xl p-8 text-center transition-all duration-300 h-fit ${
+                          draggedCard ? 'border-orange-400 bg-orange-50' : 'border-orange-300 bg-orange-25'
+                        }`}
+                      >
+                        <div className="space-y-4">
+                          <div className="w-16 h-16 bg-orange-500 rounded-full mx-auto flex items-center justify-center">
+                            <Info className="h-8 w-8 text-white" />
+                          </div>
+                          <h3 className="text-2xl font-bold text-orange-700">NO MATCH</h3>
+                          <p className="text-orange-600">Drag non-fitting startups here</p>
 
-        {/* Expandable Sections - only show if above threshold */}
-        {estimationAnswer !== 'no' && (
-          <div className="space-y-4 animate-fade-in" style={{ animationDelay: '700ms', animationDuration: '1200ms' }}>
-            <Accordion 
-              type="multiple" 
-              className="space-y-4"
-              value={openAccordions}
-              onValueChange={setOpenAccordions}
-            >
-              {/* Bepaling scope opdracht */}
-              <AccordionItem value="bepaling-scope" className="bg-white rounded-xl shadow-sm border">
-                <AccordionTrigger className="px-6 py-4 hover:no-underline">
-                  <span className="text-lg font-semibold">Bepaling scope opdracht</span>
-                </AccordionTrigger>
-                <AccordionContent className="px-6 pb-6">
-                  <div className="space-y-4">
-                    <div className="text-gray-600 mb-4">
-                      <p className="mb-3">Wat je doet in deze fase:</p>
-                      <ul className="list-disc list-inside mb-4 space-y-1">
-                        <li>Vaststellen van de opdracht en het doel ervan</li>
-                        <li>Opstellen van het programma van eisen (PvE)</li>
-                        <li>Kiezen van de aanbestedingsstrategie (bijv. EMVI, laagste prijs, functioneel specificeren)</li>
-                        <li>Bepalen of en hoe duurzaamheid wordt meegenomen — en dus hoe je invulling geeft aan de EED/GPP-verplichting</li>
-                      </ul>
-                      <div className="p-4 bg-green-50 rounded-lg border border-green-200 mb-4">
-                        <p className="text-green-800"><strong>📌 Let op:</strong> De EU GPP-criteria geven deze <strong>niet verplichte</strong> aanbevelingen voor de bepaling scope opdracht omdat deze helpen om duurzaamheidsdoelen te realiseren.</p>
+                          {/* No Match Cards */}
+                          <div className="space-y-2 mt-6">
+                            {startupCards.filter(card => card.status === 'no-match').map(card => (
+                              <div key={card.id} className="bg-orange-100 rounded-lg p-3 text-left border border-orange-200 relative group">
+                                <button
+                                  onClick={() => moveCardBackToStack(card.id)}
+                                  className="absolute top-2 right-2 w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                  title="Move back to stack"
+                                >
+                                  <X className="h-3 w-3 text-white" />
+                                </button>
+                                <p className="font-medium text-orange-800">{card.title}</p>
+                                <p className="text-sm text-orange-600">{card.category} • {card.caseManager}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    {sampleBepalingScope.map((item, index) => (
-                      <ExpandableInfo key={index} {...item} />
-                    ))}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
 
-              {/* Technische specificaties */}
-              <AccordionItem value="technische-specificaties" className="bg-white rounded-xl shadow-sm border">
-                <AccordionTrigger className="px-6 py-4 hover:no-underline">
-                  <span className="text-lg font-semibold">Technische specificaties</span>
-                </AccordionTrigger>
-                <AccordionContent className="px-6 pb-6">
-                  <div className="space-y-4">
-                    <div className="text-gray-600 mb-4">
-                      <p className="mb-4">Bij deze aanbesteding moeten de Europese GPP-criteria uitdrukkelijk worden opgenomen als technische specificaties. Ze vormen de ondergrens waaraan geleverd meubilair moet voldoen. Door deze eisen expliciet in het bestek op te nemen, voldoe je aan de verplichting uit de Energie-Efficiëntierichtlijn (EED).</p>
-                      <div className="p-4 bg-amber-50 rounded-lg border border-amber-200 mb-4">
-                        <p className="text-amber-800">
-                          ⚠️ <strong>Let op:</strong> De minimale technische specificaties uit de GPP criteria zijn verplicht voor deze aanbesteding.
-                        </p>
-                      </div>
-                      <p>Kopieer de tabel hier onder letterlijk in je bestek of verwijs naar <a href="https://green-forum.ec.europa.eu/green-business/green-public-procurement/gpp-criteria-and-requirements_en" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">de officiële EU GPP-meubilaircriteria</a>.</p>
-                    </div>
-                    <TechnischeSpecificatiesTables />
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
+                    {/* Startup Cards Column - Middle */}
+                    <div className="order-1 lg:order-2">
+                      <h2 className="text-lg font-semibold text-gray-800 mb-6 flex items-center justify-center gap-2">
+                        <ArrowDown className="h-5 w-5" style={{ color: '#4C818C' }} />
+                        <span className="font-bold">Qualify these startups</span>
+                        <ArrowDown className="h-5 w-5" style={{ color: '#4C818C' }} />
+                      </h2>
 
-              {/* Gunningscriteria */}
-              <AccordionItem value="gunningscriteria" className="bg-white rounded-xl shadow-sm border">
-                <AccordionTrigger className="px-6 py-4 hover:no-underline">
-                  <span className="text-lg font-semibold">Gunningscriteria</span>
-                </AccordionTrigger>
-                <AccordionContent className="px-6 pb-6">
-                  <div className="space-y-4">
-                    <div className="text-gray-600 mb-4">
-                      <p className="mb-4">Gebruik gunningscriteria om bepaalde prestaties extra te belonen. De onderstaande voorbeelden zijn optioneel en helpen je aanbesteding aan te laten sluiten op je ambities.</p>
-                      <div className="p-4 mb-4 bg-green-50 border border-green-200 rounded-lg">
-                        <p className="text-green-800">📌 <strong>Let op:</strong> De EU GPP-criteria geven deze <strong>niet verplichte</strong> aanbevelingen voor gunningscriteria omdat deze helpen om duurzaamheidsdoelen te realiseren.</p>
-                      </div>
-                    </div>
-                    <GunningscriteriaTable />
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
+                      <div className="relative min-h-[500px]">
+                        {startupCards.filter(card => card.status === 'unassigned').map((card, index) => (
+                          <div
+                            key={card.id}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, card.id)}
+                            onDragEnd={handleDragEnd}
+                            className={`absolute bg-white rounded-xl border-2 border-gray-200 p-6 cursor-grab active:cursor-grabbing transition-all duration-200 hover:shadow-lg hover:border-gradient-start/50 hover:z-20 w-full ${
+                              draggedCard === card.id ? 'opacity-50 rotate-2 scale-105 z-30' : ''
+                            }`}
+                            style={{
+                              top: `${index * 8}px`,
+                              left: `${index * 4}px`,
+                              zIndex: startupCards.filter(card => card.status === 'unassigned').length - index
+                            }}
+                          >
+                            {/* Drag Handle */}
+                            <div className="flex items-start gap-4">
+                              <GripVertical className="h-5 w-5 text-gray-400 mt-1 flex-shrink-0" />
 
-              {/* Contractuele uitvoeringsvoorwaarden */}
-              <AccordionItem value="contractuele-uitvoeringsvoorwaarden" className="bg-white rounded-xl shadow-sm border">
-                <AccordionTrigger className="px-6 py-4 hover:no-underline">
-                  <span className="text-lg font-semibold">Contractuele uitvoeringsvoorwaarden</span>
-                </AccordionTrigger>
-                <AccordionContent className="px-6 pb-6">
-                  <div className="space-y-4">
-                    <div className="text-gray-600 mb-4">
-                      <p className="mb-4">De toepasselijke GPP-criteria bevatten aanbevelingen voor contractuele voorwaarden op het gebied van arbeidsomstandigheden, sociale normen en milieunormen. Deze zijn niet verplicht, maar dragen bij aan circulaire of klimaatvriendelijke doelstellingen en sluiten aan bij het Rijksbeleid voor maatschappelijk verantwoord inkopen.</p>
-                      <div className="p-4 bg-green-50 rounded-lg border border-green-200 mb-4">
-                        <p className="text-green-800">
-                          📌 <strong>Let op:</strong> De EU GPP-criteria geven deze <strong>niet verplichte</strong> aanbevelingen voor contractuele uitvoeringsvoorwaarden omdat deze helpen om duurzaamheidsdoelen te realiseren.
-                        </p>
+                              <div className="flex-1 space-y-4">
+                                {/* Title */}
+                                <h3 className="text-xl font-bold text-gray-900">{card.title}</h3>
+
+                                {/* Description */}
+                                <p className="text-gray-600 leading-relaxed">{card.description}</p>
+
+                                {/* Action Buttons */}
+                                <div className="flex flex-wrap gap-3">
+                                  <button className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-start/20 text-gray-800 rounded-lg hover:bg-gradient-start/30 transition-colors border border-gradient-start/30">
+                                    <FileText className="h-4 w-4" />
+                                    View deck
+                                  </button>
+                                  <button className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-middle border border-gray-200 text-gray-800 rounded-lg hover:bg-gray-50 transition-colors">
+                                    <MessageSquare className="h-4 w-4" />
+                                    View comments
+                                  </button>
+                                </div>
+
+                                {/* Dropdowns */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  {/* Category Dropdown */}
+                                  <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                                    <Select value={card.category} onValueChange={(value) => updateCardCategory(card.id, value)}>
+                                      <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Select a category" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {categories.map(category => (
+                                          <SelectItem key={category} value={category}>{category}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+
+                                  {/* Case Manager Dropdown */}
+                                  <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Assign to</label>
+                                    <Select value={card.caseManager} onValueChange={(value) => updateCardCaseManager(card.id, value)}>
+                                      <SelectTrigger className="w-full">
+                                        <SelectValue placeholder="Select Case Manager" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {caseManagers.map(manager => (
+                                          <SelectItem key={manager} value={manager}>{manager}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+
+                        {startupCards.filter(card => card.status === 'unassigned').length === 0 && (
+                          <div className="absolute top-0 left-0 right-0">
+                            <div className="h-14 mb-6"></div>
+                            <div className="flex justify-center">
+                              <div className="border-4 border-dashed rounded-xl p-8 text-center w-full max-w-md" style={{ borderColor: '#4C818C', backgroundColor: '#4C818C15' }}>
+                                <div className="space-y-4">
+                                  <div className="w-16 h-16 rounded-full mx-auto flex items-center justify-center" style={{ backgroundColor: '#4C818C' }}>
+                                    <CheckCircle className="h-8 w-8 text-white" />
+                                  </div>
+                                  <h3 className="text-2xl font-bold" style={{ color: '#4C818C' }}>All done!</h3>
+                                  <button 
+                                    className="px-6 py-3 text-white rounded-lg transition-colors font-medium"
+                                    style={{ backgroundColor: '#4C818C' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#3A6670'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#4C818C'}
+                                  >
+                                    Process (dis)qualifications
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <ContractueleUitvoeringsvoorwaardenTable />
+
+                    {/* QUALIFY Drop Zone - Right */}
+                    <div className="order-3 lg:order-3">
+                      <div className="h-14 mb-6"></div>
+                      <div
+                        onDrop={(e) => handleDrop(e, 'qualify')}
+                        onDragOver={handleDragOver}
+                        className={`border-4 border-dashed rounded-xl p-8 text-center transition-all duration-300 h-fit ${
+                          draggedCard ? 'border-green-400 bg-green-50' : 'border-green-300 bg-green-25'
+                        }`}
+                      >
+                        <div className="space-y-4">
+                          <div className="w-16 h-16 bg-green-500 rounded-full mx-auto flex items-center justify-center">
+                            <CheckCircle className="h-8 w-8 text-white" />
+                          </div>
+                          <h3 className="text-2xl font-bold text-green-700">QUALIFY</h3>
+                          <p className="text-green-600">Drag promising startups here</p>
+
+                          {/* Qualified Cards */}
+                          <div className="space-y-2 mt-6">
+                            {startupCards.filter(card => card.status === 'qualify').map(card => (
+                              <div key={card.id} className="bg-green-100 rounded-lg p-3 text-left border border-green-200 relative group">
+                                <button
+                                  onClick={() => moveCardBackToStack(card.id)}
+                                  className="absolute top-2 right-2 w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                  title="Move back to stack"
+                                >
+                                  <X className="h-3 w-3 text-white" />
+                                </button>
+                                <p className="font-medium text-green-800">{card.title}</p>
+                                <p className="text-sm text-green-600">{card.category} • {card.caseManager}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </div>
-        )}
+                </div>
+
+                {/* Disclaimer Section */}
+                <div className="mt-4 mb-0 animate-fade-in" style={{ animationDelay: '500ms', animationDuration: '1000ms' }}>
+                  <div className="bg-red-50 border-2 border-dotted border-red-300 rounded-lg p-4">
+                    <p className="text-sm text-red-800 leading-relaxed flex items-center justify-center gap-2 text-center">
+                      <span className="text-red-600 flex-shrink-0">⚠️</span>
+                      Don't share information from this tool without checking with the startup's founders first. You're receiving this automated newsletter because you're a member of OpX.
+                    </p>
+                  </div>
+                </div>
+
+
+
+
+
+
+
       </div>
     </div>
   );

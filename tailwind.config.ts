@@ -61,7 +61,15 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+				// Custom gradient colors for Operator Exchange
+				'gradient-start': '#DDF3F2',
+				'gradient-middle': '#FBFEFE', 
+				'gradient-end': '#D3ECEA',
+				// Custom footer color
+				'footer-bg': '#F8FDFD',
+				// Custom card background
+				'card-bg': '#F0FBFA'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
